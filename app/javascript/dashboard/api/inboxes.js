@@ -73,6 +73,18 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.post(`${this.url}/${inboxId}/rotate_hmac_token`);
   }
 
+  enableWhatsappGroups(inboxId) {
+    return axios.post(`${this.url}/${inboxId}/whatsapp_groups/enable`);
+  }
+
+  disableWhatsappGroups(inboxId) {
+    return axios.post(`${this.url}/${inboxId}/whatsapp_groups/disable`);
+  }
+
+  createWhatsappGroup(inboxId, payload) {
+    return axios.post(`${this.url}/${inboxId}/whatsapp_groups`, payload);
+  }
+
   enableWhatsappCalling(inboxId) {
     return axios.post(`${this.url}/${inboxId}/enable_whatsapp_calling`);
   }

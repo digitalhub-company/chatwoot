@@ -12,6 +12,7 @@ import SLACardLabel from 'dashboard/components-next/Conversation/Sla/SLACardLabe
 import CardStatusIcon from './CardStatusIcon.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import { conversationDisplayName } from 'dashboard/helper/groupConversation';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -59,6 +60,9 @@ const orderClass = key =>
   props.conversationFirst ? CONVERSATION_FIRST_ORDER[key] : undefined;
 
 const lastMessageInChat = computed(() => getLastMessage(props.chat));
+const displayName = computed(() =>
+  conversationDisplayName(props.chat, props.currentContact?.name)
+);
 const showLabelsSection = computed(() => props.chat.labels?.length > 0);
 
 const voiceCallData = computed(() => {
@@ -217,7 +221,7 @@ const selectedModel = computed({
         class="text-heading-3 my-0 capitalize truncate text-n-slate-12 font-medium w-32 flex-shrink-0"
         :class="orderClass('name')"
       >
-        {{ currentContact.name }}
+        {{ displayName }}
       </h4>
 
       <CardContent

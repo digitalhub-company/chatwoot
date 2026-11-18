@@ -75,7 +75,8 @@ class Conversation < ApplicationRecord
 
   validates :account_id, presence: true
   validates :inbox_id, presence: true
-  validates :contact_id, presence: true
+  validates :contact_id, presence: true, unless: :group?
+  validates :contact_inbox_id, presence: true, unless: :group?
   before_validation :validate_additional_attributes
   before_validation :reset_agent_bot_when_assignee_present
   validates :additional_attributes, jsonb_attributes_length: true
@@ -104,6 +105,9 @@ class Conversation < ApplicationRecord
     open.where('last_activity_at < ?', Time.now.utc - auto_resolve_after.minutes)
   }
 
+  scope :group_conversations, -> { where(group: true) }
+  scope :non_group_conversations, -> { where(group: false) }
+
   scope :last_user_message_at, lambda {
     joins(
       "INNER JOIN (#{last_messaged_conversations.to_sql}) AS grouped_conversations
@@ -119,8 +123,8 @@ class Conversation < ApplicationRecord
              foreign_key: :assignee_agent_bot_id,
              foreign_type: :ai_assignee_type,
              optional: true
-  belongs_to :contact
-  belongs_to :contact_inbox
+  belongs_to :contact, optional: true
+  belongs_to :contact_inbox, optional: true
   belongs_to :team, optional: true
   belongs_to :campaign, optional: true
 
@@ -128,6 +132,8 @@ class Conversation < ApplicationRecord
   has_many :messages, dependent: :destroy_async, autosave: true
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :conversation_participants, dependent: :destroy_async
+  has_many :group_contacts, dependent: :destroy_async
+  has_many :additional_contacts, through: :group_contacts, source: :contact
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
   has_many :attachments, through: :messages
   has_many :reporting_events, dependent: :destroy_async
@@ -268,6 +274,17 @@ class Conversation < ApplicationRecord
     dispatcher_dispatch(CONVERSATION_UPDATED, previous_changes)
   end
 
+  def all_contacts
+    Contact.where(id: [contact_id, *group_contacts.pluck(:contact_id)].compact)
+  end
+
+  def includes_contact?(target_contact)
+    return false if target_contact.blank?
+    return true if contact_id == target_contact.id
+
+    group_contacts.exists?(contact_id: target_contact.id)
+  end
+
   private
 
   def execute_after_update_commit_callbacks
@@ -300,7 +317,7 @@ class Conversation < ApplicationRecord
   end
 
   def mark_contact_as_lead
-    contact.update(contact_type: :lead) if contact.visitor?
+    contact.update(contact_type: :lead) if contact&.visitor?
   end
 
   def validate_additional_attributes
@@ -314,7 +331,7 @@ class Conversation < ApplicationRecord
   end
 
   def determine_conversation_status
-    self.status = :resolved and return if contact.blocked?
+    self.status = :resolved and return if contact&.blocked?
 
     return handle_campaign_status if campaign.present?
 

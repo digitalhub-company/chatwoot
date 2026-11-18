@@ -28,6 +28,14 @@ class ConversationApi extends ApiClient {
   getUnreadCounts() {
     return axios.get(`${this.url}/unread_counts`);
   }
+
+  getWhatsappGroup(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/whatsapp_group`);
+  }
+
+  getWhatsappGroupInviteLink(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/whatsapp_group/invite_link`);
+  }
 }
 
 export default new ConversationApi();

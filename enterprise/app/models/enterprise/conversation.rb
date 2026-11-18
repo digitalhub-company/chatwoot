@@ -2,7 +2,7 @@ module Enterprise::Conversation
   attr_accessor :captain_activity_reason, :captain_activity_reason_type
 
   def can_reply?
-    return false if contact_inbox.anonymous_caller?
+    return false if contact_inbox&.anonymous_caller?
 
     super
   end

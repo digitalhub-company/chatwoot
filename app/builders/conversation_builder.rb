@@ -35,6 +35,16 @@ class ConversationBuilder
       snoozed_until: params[:snoozed_until],
       assignee_id: params[:assignee_id],
       team_id: params[:team_id]
-    }.merge(status)
+    }.merge(status).merge(group_attributes)
+  end
+
+  def group_attributes
+    return {} unless ActiveModel::Type::Boolean.new.cast(params[:group])
+
+    {
+      group: true,
+      group_title: params[:group_title],
+      group_source_id: params[:group_source_id]
+    }
   end
 end

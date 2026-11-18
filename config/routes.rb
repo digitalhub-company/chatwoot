@@ -207,6 +207,11 @@ Rails.application.routes.draw do
               resources :assignments, only: [:create]
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]
+              resource :group_contacts, only: [:show, :create, :update, :destroy]
+              resource :whatsapp_group, only: [:show], controller: 'whatsapp_group' do
+                get :invite_link
+                delete :participants, action: :remove_participants
+              end
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
               resource :suggestions, only: [] do
@@ -343,6 +348,12 @@ Rails.application.routes.draw do
             put :whatsapp_business_management_token, on: :member
             get :health, on: :member
             post :register_webhook, on: :member
+            resources :whatsapp_groups, only: [:index, :create], controller: 'inboxes/whatsapp_groups' do
+              collection do
+                post :enable
+                post :disable
+              end
+            end
             post :reset_secret, on: :member
             post :rotate_hmac_token, on: :member
             if ChatwootApp.enterprise?

@@ -1,4 +1,11 @@
 class Whatsapp::WebhookSetupService
+  GROUP_WEBHOOK_FIELDS = %w[
+    group_lifecycle_update
+    group_participants_update
+    group_settings_update
+    group_status_update
+  ].freeze
+
   attr_reader :registration_error
 
   def initialize(channel, waba_id = nil, access_token = nil, is_coexistence: nil)
@@ -85,7 +92,21 @@ class Whatsapp::WebhookSetupService
   def subscribed_fields
     fields = %w[messages smb_message_echoes]
     fields << 'calls' if calls_enabled_on_waba?
+    fields.concat(GROUP_WEBHOOK_FIELDS) if groups_enabled_on_waba?
     fields
+  end
+
+  # Group webhook fields are a WABA-wide app subscription. Keep them when any sibling inbox
+  # still has groups enabled, matching the calls subscription.
+  def groups_enabled_on_waba?
+    return true if ActiveModel::Type::Boolean.new.cast(@channel.provider_config['groups_enabled'])
+
+    Channel::Whatsapp
+      .where(provider: 'whatsapp_cloud')
+      .where.not(id: @channel.id)
+      .where("provider_config->>'business_account_id' = ?", @waba_id)
+      .where("provider_config->>'groups_enabled' = 'true'")
+      .exists?
   end
 
   # `subscribed_fields` is a WABA-wide app subscription, so keep `calls` whenever this inbox or

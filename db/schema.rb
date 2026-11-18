@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_19_143116) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_18_211928) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1016,6 +1016,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_19_143116) do
     t.bigint "assignee_agent_bot_id"
     t.string "ai_assignee_type"
     t.datetime "status_changed_at"
+    t.boolean "group", default: false, null: false
+    t.string "group_source_id"
+    t.string "group_title"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -1028,6 +1031,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_19_143116) do
     t.index ["created_at"], name: "index_conversations_on_created_at"
     t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
     t.index ["identifier", "account_id"], name: "index_conversations_on_identifier_and_account_id"
+    t.index ["inbox_id", "group_source_id"], name: "index_conversations_on_inbox_id_and_group_source_id", unique: true, where: "(group_source_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
     t.index ["priority"], name: "index_conversations_on_priority"
     t.index ["status", "account_id"], name: "index_conversations_on_status_and_account_id"
@@ -1303,6 +1307,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_19_143116) do
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "group_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_group_contacts_on_account_id"
+    t.index ["contact_id"], name: "index_group_contacts_on_contact_id"
+    t.index ["conversation_id", "contact_id"], name: "index_group_contacts_on_conversation_and_contact", unique: true
+    t.index ["conversation_id"], name: "index_group_contacts_on_conversation_id"
   end
 
   create_table "inbox_assignment_policies", force: :cascade do |t|

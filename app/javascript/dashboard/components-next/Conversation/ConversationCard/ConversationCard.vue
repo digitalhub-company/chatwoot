@@ -11,6 +11,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import CardMessagePreview from './CardMessagePreview.vue';
 import CardMessagePreviewWithMeta from './CardMessagePreviewWithMeta.vue';
 import CardPriorityIcon from './CardPriorityIcon.vue';
+import { conversationDisplayName } from 'dashboard/helper/groupConversation';
 
 const props = defineProps({
   conversation: {
@@ -40,7 +41,9 @@ const cardMessagePreviewWithMetaRef = ref(null);
 
 const currentContact = computed(() => props.contact);
 
-const currentContactName = computed(() => currentContact.value?.name);
+const currentContactName = computed(() =>
+  conversationDisplayName(props.conversation, currentContact.value?.name)
+);
 const currentContactThumbnail = computed(() => currentContact.value?.thumbnail);
 const currentContactStatus = computed(
   () => currentContact.value?.availabilityStatus
