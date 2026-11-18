@@ -13,8 +13,20 @@ RSpec.describe Conversation do
   describe 'associations' do
     it { is_expected.to belong_to(:account) }
     it { is_expected.to belong_to(:inbox) }
-    it { is_expected.to belong_to(:contact) }
-    it { is_expected.to belong_to(:contact_inbox) }
+    it { is_expected.to belong_to(:contact).optional }
+    it { is_expected.to belong_to(:contact_inbox).optional }
+
+    it 'requires a contact unless the conversation is a group' do
+      conversation = build(:conversation)
+      conversation.contact = nil
+      conversation.contact_inbox = nil
+
+      expect(conversation).not_to be_valid
+
+      conversation.group = true
+      expect(conversation).to be_valid
+    end
+
     it { is_expected.to belong_to(:assignee).optional }
     it { is_expected.to belong_to(:ai_assignee).optional }
     it { is_expected.to belong_to(:team).optional }
@@ -730,7 +742,10 @@ RSpec.describe Conversation do
         updated_at: conversation.updated_at.to_f,
         waiting_since: conversation.waiting_since.to_i,
         priority: nil,
-        unread_count: 0
+        unread_count: 0,
+        group: false,
+        group_title: nil,
+        group_source_id: nil
       }
     end
 
