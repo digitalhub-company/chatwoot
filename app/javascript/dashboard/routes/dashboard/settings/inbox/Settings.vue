@@ -1438,10 +1438,7 @@ export default {
         >
           <WhatsappCallingPage :inbox="inbox" />
         </div>
-        <div
-          v-if="selectedTabKey === 'whatsapp-groups'"
-          class="mx-6 max-w-4xl"
-        >
+        <div v-if="selectedTabKey === 'whatsapp-groups'" class="mx-6 max-w-4xl">
           <WhatsappGroupsPage :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'csat'">

@@ -34,7 +34,9 @@ class ConversationApi extends ApiClient {
   }
 
   getWhatsappGroupInviteLink(conversationId) {
-    return axios.get(`${this.url}/${conversationId}/whatsapp_group/invite_link`);
+    return axios.get(
+      `${this.url}/${conversationId}/whatsapp_group/invite_link`
+    );
   }
 }
 

@@ -88,7 +88,8 @@ const displayName = computed(() =>
 
 const copyGroupInviteLink = async () => {
   try {
-    const storedLink = props.chat.additional_attributes?.whatsapp_group?.invite_link;
+    const storedLink =
+      props.chat.additional_attributes?.whatsapp_group?.invite_link;
     const link =
       storedLink ||
       (await ConversationApi.getWhatsappGroupInviteLink(props.chat.id)).data

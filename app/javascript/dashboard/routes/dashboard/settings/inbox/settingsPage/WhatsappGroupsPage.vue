@@ -26,7 +26,10 @@ const description = ref('');
 const joinApprovalMode = ref('auto_approve');
 
 const approvalOptions = computed(() => [
-  { value: 'auto_approve', label: t('INBOX_MGMT.WHATSAPP_GROUPS.APPROVAL.AUTO') },
+  {
+    value: 'auto_approve',
+    label: t('INBOX_MGMT.WHATSAPP_GROUPS.APPROVAL.AUTO'),
+  },
   {
     value: 'approval_required',
     label: t('INBOX_MGMT.WHATSAPP_GROUPS.APPROVAL.REQUIRED'),
@@ -87,7 +90,8 @@ const createGroup = async () => {
     );
   } catch (error) {
     useAlert(
-      error?.response?.data?.error || t('INBOX_MGMT.WHATSAPP_GROUPS.CREATE_ERROR')
+      error?.response?.data?.error ||
+        t('INBOX_MGMT.WHATSAPP_GROUPS.CREATE_ERROR')
     );
   } finally {
     isCreating.value = false;
@@ -108,8 +112,14 @@ const createGroup = async () => {
       {{ t('INBOX_MGMT.WHATSAPP_GROUPS.LIMITS') }}
     </p>
 
-    <form v-if="groupsEnabled" class="flex flex-col gap-4" @submit.prevent="createGroup">
-      <SettingsFieldSection :label="t('INBOX_MGMT.WHATSAPP_GROUPS.SUBJECT.LABEL')">
+    <form
+      v-if="groupsEnabled"
+      class="flex flex-col gap-4"
+      @submit.prevent="createGroup"
+    >
+      <SettingsFieldSection
+        :label="t('INBOX_MGMT.WHATSAPP_GROUPS.SUBJECT.LABEL')"
+      >
         <input
           v-model="subject"
           type="text"
@@ -129,7 +139,9 @@ const createGroup = async () => {
           class="w-full rounded-lg border border-n-weak bg-n-background px-3 py-2 text-sm"
         />
       </SettingsFieldSection>
-      <SettingsFieldSection :label="t('INBOX_MGMT.WHATSAPP_GROUPS.APPROVAL.LABEL')">
+      <SettingsFieldSection
+        :label="t('INBOX_MGMT.WHATSAPP_GROUPS.APPROVAL.LABEL')"
+      >
         <select
           v-model="joinApprovalMode"
           class="w-full rounded-lg border border-n-weak bg-n-background px-3 py-2 text-sm"
