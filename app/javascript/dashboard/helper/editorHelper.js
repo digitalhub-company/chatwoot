@@ -96,9 +96,14 @@ export function stripUnsupportedMarkdown(
 
 /**
  * The delimiter used to separate the signature from the rest of the body.
+ * WhatsApp does not use this delimiter; its signature is a leading bold line.
  * @type {string}
  */
 export const SIGNATURE_DELIMITER = '--';
+
+const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const isWhatsappChannel = channelType => channelType === INBOX_TYPES.WHATSAPP;
 
 /**
  * Parse and Serialize the markdown text to remove any extra spaces or new lines
@@ -123,6 +128,54 @@ export function cleanSignature(signature) {
     // for example, Token type `hr` not supported by Markdown parser
     return signature;
   }
+}
+
+/**
+ * WhatsApp signatures are a leading line, not a `--` footer.
+ *
+ * The stored signature stays plain text (for example `Diego Camuri`). Formatting
+ * already in that string is stripped with extractTextFromMarkdown so we never
+ * wrap `**` around an existing `**`. A trailing colon is kept; otherwise one is
+ * added. The editor then stores CommonMark bold, `**Diego Camuri:**`, which
+ * Messages::MarkdownRenderers::WhatsAppRenderer turns into single-asterisk
+ * WhatsApp bold: `*Diego Camuri:*`.
+ *
+ * @param {string} signature
+ * @returns {string}
+ */
+export function formatWhatsappSignature(signature) {
+  const plain = extractTextFromMarkdown(signature).replace(/\n+/g, ' ').trim();
+  if (!plain) return '';
+
+  const label = plain.endsWith(':') ? plain : `${plain}:`;
+  return `**${label}**`;
+}
+
+function whatsappSignaturePrefixes(signature) {
+  const formatted = formatWhatsappSignature(signature);
+  if (!formatted) return [];
+
+  const cleaned = cleanSignature(formatted).trim();
+  return [...new Set([formatted, cleaned].filter(Boolean))];
+}
+
+function findLeadingWhatsappSignatureIndex(body, signature) {
+  if (!body) return -1;
+
+  return whatsappSignaturePrefixes(signature).reduce((found, prefix) => {
+    if (found > -1) return found;
+    const match = new RegExp(`^\\s*${escapeRegExp(prefix)}`).exec(body);
+    return match ? body.indexOf(prefix) : -1;
+  }, -1);
+}
+
+function removeLeadingWhatsappSignature(body, signature) {
+  if (!body) return body || '';
+
+  return whatsappSignaturePrefixes(signature).reduce((next, prefix) => {
+    const pattern = new RegExp(`^\\s*${escapeRegExp(prefix)}\\n?`);
+    return pattern.test(next) ? next.replace(pattern, '') : next;
+  }, body);
 }
 
 // Strip `\<newline>` hardbreak markers trailing `--` after a signature slice
@@ -162,7 +215,12 @@ function appendDelimiter(signature) {
  * @param {string} signature - The signature to search for.
  * @returns {number} - The index of the last occurrence of the signature in the body, or -1 if not found.
  */
-export function findSignatureInBody(body, signature) {
+export function findSignatureInBody(body, signature, channelType) {
+  if (isWhatsappChannel(channelType)) {
+    const leadingIndex = findLeadingWhatsappSignatureIndex(body, signature);
+    if (leadingIndex > -1) return leadingIndex;
+  }
+
   const trimmedBody = body.trimEnd();
   const cleanedSignature = cleanSignature(signature);
 
@@ -192,30 +250,6 @@ export function getEffectiveChannelType(channelType, medium) {
 }
 
 /**
- * Appends the signature to the body, separated by the signature delimiter.
- * Automatically strips unsupported formatting based on channel capabilities.
- *
- * @param {string} body - The body to append the signature to.
- * @param {string} signature - The signature to append.
- * @param {string} channelType - Optional. The effective channel type to determine supported formatting.
- *                               For Twilio channels, pass the result of getEffectiveChannelType().
- * @returns {string} - The body with the signature appended.
- */
-export function appendSignature(body, signature, channelType) {
-  // Strip only unsupported formatting based on channel capabilities
-  const preparedSignature = channelType
-    ? stripUnsupportedMarkdown(signature, channelType)
-    : signature;
-  const cleanedSignature = cleanSignature(preparedSignature);
-  // if signature is already present, return body
-  if (findSignatureInBody(body, cleanedSignature) > -1) {
-    return body;
-  }
-
-  return `${body.trimEnd()}\n\n${appendDelimiter(cleanedSignature)}`;
-}
-
-/**
  * Removes the signature from the body, along with the signature delimiter.
  * Tries multiple signature variants: original, channel-stripped, and fully stripped.
  *
@@ -224,7 +258,7 @@ export function appendSignature(body, signature, channelType) {
  * @param {string} channelType - Optional. The effective channel type for channel-specific stripping.
  * @returns {string} - The body with the signature removed.
  */
-export function removeSignature(body, signature, channelType) {
+function removeTrailingDelimitedSignature(body, signature, channelType) {
   // Build unique list of signature variants to try
   const channelStripped = channelType
     ? cleanSignature(stripUnsupportedMarkdown(signature, channelType))
@@ -235,7 +269,8 @@ export function removeSignature(body, signature, channelType) {
     cleanSignature(extractTextFromMarkdown(signature)),
   ].filter((sig, i, arr) => sig && arr.indexOf(sig) === i); // Remove nulls and duplicates
 
-  // Find the first matching signature
+  // Find the first matching signature at the end. Do not pass channelType here:
+  // that lookup is for the leading WhatsApp line and would hide a legacy footer.
   const signatureIndex = signaturesToTry.reduce(
     (index, sig) => (index === -1 ? findSignatureInBody(body, sig) : index),
     -1
@@ -264,6 +299,60 @@ export function removeSignature(body, signature, channelType) {
   }
 
   return newBody;
+}
+
+function appendWhatsappSignature(body, signature) {
+  const formatted = formatWhatsappSignature(signature);
+  if (!formatted) return body || '';
+
+  const withoutLegacy = removeTrailingDelimitedSignature(body || '', signature);
+  if (findLeadingWhatsappSignatureIndex(withoutLegacy, signature) > -1) {
+    return withoutLegacy;
+  }
+
+  const rest = withoutLegacy.replace(/^\n+/, '').replace(/\n+$/, '');
+  return rest ? `${formatted}\n${rest}` : `${formatted}\n`;
+}
+
+/**
+ * Appends the signature to the body, separated by the signature delimiter.
+ * Automatically strips unsupported formatting based on channel capabilities.
+ *
+ * @param {string} body - The body to append the signature to.
+ * @param {string} signature - The signature to append.
+ * @param {string} channelType - Optional. The effective channel type to determine supported formatting.
+ *                               For Twilio channels, pass the result of getEffectiveChannelType().
+ * @returns {string} - The body with the signature appended.
+ */
+export function appendSignature(body, signature, channelType) {
+  // Strip only unsupported formatting based on channel capabilities
+  const preparedSignature = channelType
+    ? stripUnsupportedMarkdown(signature, channelType)
+    : signature;
+
+  if (isWhatsappChannel(channelType)) {
+    return appendWhatsappSignature(body, preparedSignature);
+  }
+
+  const cleanedSignature = cleanSignature(preparedSignature);
+  // if signature is already present, return body
+  if (findSignatureInBody(body, cleanedSignature) > -1) {
+    return body;
+  }
+
+  return `${body.trimEnd()}\n\n${appendDelimiter(cleanedSignature)}`;
+}
+
+export function removeSignature(body, signature, channelType) {
+  const withoutLeading = isWhatsappChannel(channelType)
+    ? removeLeadingWhatsappSignature(body, signature)
+    : body;
+
+  return removeTrailingDelimitedSignature(
+    withoutLeading,
+    signature,
+    channelType
+  );
 }
 
 /**

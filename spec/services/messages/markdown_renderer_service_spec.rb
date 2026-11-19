@@ -23,6 +23,12 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
         expect(result.strip).to eq('*bold text*')
       end
 
+      it 'renders a leading agent signature as bold text, a colon, and one line break' do
+        content = "**Diego Camuri:**\nHello"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("*Diego Camuri:*\nHello")
+      end
+
       it 'keeps italic with underscore' do
         content = '_italic text_'
         result = described_class.new(content, channel_type).render
