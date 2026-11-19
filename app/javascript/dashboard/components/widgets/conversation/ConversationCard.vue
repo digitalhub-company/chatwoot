@@ -12,6 +12,7 @@ import UnreadBadge from 'dashboard/components-next/Conversation/ConversationCard
 import SLACardLabel from './components/SLACardLabel.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import { conversationDisplayName } from 'dashboard/helper/groupConversation';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -34,6 +35,10 @@ const emit = defineEmits([
 ]);
 
 const hovered = ref(false);
+
+const displayName = computed(() =>
+  conversationDisplayName(props.chat, props.currentContact?.name)
+);
 
 const unreadCount = computed(() => props.chat.unread_count);
 const hasUnread = computed(() => unreadCount.value > 0);
@@ -127,7 +132,7 @@ watch(
     >
       <Avatar
         v-if="!hideThumbnail"
-        :name="currentContact.name"
+        :name="displayName"
         :src="currentContact.thumbnail"
         :size="32"
         :status="currentContact.availability_status"
@@ -182,7 +187,7 @@ watch(
         class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
         :class="hasUnread ? 'font-semibold' : 'font-medium'"
       >
-        {{ currentContact.name }}
+        {{ displayName }}
       </h4>
       <VoiceCallStatus
         v-if="voiceCallData.status"

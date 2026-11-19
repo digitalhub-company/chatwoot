@@ -52,7 +52,7 @@ class Whatsapp::IncomingMessageBaseService
     status = @processed_params[:statuses].first
     return unless find_message_by_source_id(status[:id])
 
-    update_whatsapp_identifiers_from_status(status)
+    update_whatsapp_identifiers_from_status(status) unless status[:recipient_type] == 'group'
     update_message_with_status(@message, status)
   rescue ArgumentError => e
     Rails.logger.error "Error while processing whatsapp status update #{e.message}"

@@ -15,8 +15,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
       snoozed_until: snoozed_until,
       unread_count: unread_incoming_messages.count,
       first_reply_created_at: first_reply_created_at,
-      priority: priority,
-      waiting_since: waiting_since.to_i,
+      **summary_attributes,
       **push_timestamps
     }
   end
@@ -41,11 +40,21 @@ class Conversations::EventDataPresenter < SimpleDelegator
 
   def push_meta
     {
-      sender: contact.push_event_data,
+      sender: contact&.push_event_data,
       assignee: assigned_entity&.push_event_data,
       assignee_type: assignee_type,
       team: team&.push_event_data,
       hmac_verified: contact_inbox&.hmac_verified
+    }
+  end
+
+  def summary_attributes
+    {
+      priority: priority,
+      waiting_since: waiting_since.to_i,
+      group: group?,
+      group_title: group_title,
+      group_source_id: group_source_id
     }
   end
 

@@ -273,6 +273,7 @@ describe('appendSignature with channelType', () => {
     );
     expect(result).not.toContain('![](');
     expect(result).toContain('Thanks');
+    expect(result).not.toContain('--');
   });
   it('keeps images when channelType is not provided', () => {
     const result = appendSignature('Hello', signatureWithImage);
@@ -421,6 +422,60 @@ describe('removeSignature with stripped signature', () => {
     const body = 'Hello\n\n--\n\nBest regards';
     const result = removeSignature(body, simpleSignature);
     expect(result).toBe('Hello\n\n');
+  });
+});
+
+describe('WhatsApp signature placement', () => {
+  const channel = 'Channel::Whatsapp';
+
+  it('puts a plain signature at the start as bold text with a colon', () => {
+    expect(appendSignature('Hello', 'Diego Camuri', channel)).toBe(
+      '**Diego Camuri:**\nHello'
+    );
+  });
+
+  it('does not double-wrap a signature that is already formatted', () => {
+    expect(appendSignature('Hello', '**Diego Camuri:**', channel)).toBe(
+      '**Diego Camuri:**\nHello'
+    );
+    expect(appendSignature('Hello', '**Diego Camuri**', channel)).toBe(
+      '**Diego Camuri:**\nHello'
+    );
+  });
+
+  it('keeps an existing colon instead of adding another', () => {
+    expect(appendSignature('Hello', 'Diego Camuri:', channel)).toBe(
+      '**Diego Camuri:**\nHello'
+    );
+  });
+
+  it('does not duplicate the signature when appending again', () => {
+    const signed = appendSignature('Hello', 'Diego Camuri', channel);
+    expect(appendSignature(signed, 'Diego Camuri', channel)).toBe(signed);
+  });
+
+  it('removes the leading signature and leaves the message', () => {
+    const signed = appendSignature('Hello', 'Diego Camuri', channel);
+    expect(removeSignature(signed, 'Diego Camuri', channel)).toBe('Hello');
+  });
+
+  it('removes a legacy footer signature before adding the leading one', () => {
+    const legacy = 'Hello\n\n--\n\nDiego Camuri';
+    expect(appendSignature(legacy, 'Diego Camuri', channel)).toBe(
+      '**Diego Camuri:**\nHello'
+    );
+  });
+
+  it('does not use the leading form on other channels', () => {
+    expect(appendSignature('Hello', 'Diego Camuri', 'Channel::Email')).toBe(
+      'Hello\n\n--\n\nDiego Camuri'
+    );
+  });
+
+  it('finds the leading signature', () => {
+    const signed = '**Diego Camuri:**\nHello';
+    expect(findSignatureInBody(signed, 'Diego Camuri', channel)).toBe(0);
+    expect(findSignatureInBody('Hello', 'Diego Camuri', channel)).toBe(-1);
   });
 });
 

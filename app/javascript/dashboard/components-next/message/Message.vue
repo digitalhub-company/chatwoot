@@ -558,6 +558,15 @@ const avatarInfo = computed(() => {
   };
 });
 
+const currentChat = useMapGetter('getSelectedChat');
+
+const groupSenderName = computed(() => {
+  if (!currentChat.value?.group || !contactSide.value) return '';
+  if (shouldGroupWithNext.value) return '';
+
+  return props.sender?.name || '';
+});
+
 const avatarTooltip = computed(() => {
   if (props.contentAttributes?.externalEcho) {
     return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
@@ -642,6 +651,12 @@ provideMessageContext({
         }"
         @contextmenu="openContextMenu($event)"
       >
+        <p
+          v-if="groupSenderName"
+          class="mb-1 text-xs font-medium text-n-slate-11"
+        >
+          {{ groupSenderName }}
+        </p>
         <WhatsappReferral
           v-if="shouldShowWhatsappReferral"
           :referral="contentAttributes.referral"

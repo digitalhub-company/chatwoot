@@ -3,8 +3,12 @@
 # Everywhere else we use conversation builder in partials folder
 
 json.meta do
-  json.sender do
-    json.partial! 'api/v1/models/contact', formats: [:json], resource: conversation.contact
+  if conversation.contact
+    json.sender do
+      json.partial! 'api/v1/models/contact', formats: [:json], resource: conversation.contact
+    end
+  else
+    json.sender nil
   end
   json.channel conversation.inbox.try(:channel_type)
   if conversation.assigned_entity.is_a?(AgentBot)
@@ -27,6 +31,10 @@ json.meta do
   json.hmac_verified conversation.contact_inbox&.hmac_verified
 end
 
+json.group conversation.group?
+json.group_title conversation.group_title
+json.group_source_id conversation.group_source_id
+
 json.id conversation.display_id
 # The dashboard seeds the message thread from this array and then paginates BACKWARD
 # by id (before: messages[0].id). Keep the seed as the chronologically latest message,
@@ -48,7 +56,7 @@ json.additional_attributes conversation.additional_attributes
 json.agent_last_seen_at conversation.agent_last_seen_at.to_i
 json.assignee_last_seen_at conversation.assignee_last_seen_at.to_i
 json.can_reply conversation.can_reply?
-json.anonymous_caller conversation.contact_inbox.anonymous_caller?
+json.anonymous_caller conversation.contact_inbox&.anonymous_caller? || false
 json.contact_last_seen_at conversation.contact_last_seen_at.to_i
 json.custom_attributes conversation.custom_attributes
 json.inbox_id conversation.inbox_id

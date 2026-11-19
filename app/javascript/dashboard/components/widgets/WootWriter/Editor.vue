@@ -450,6 +450,12 @@ function isBodyEmpty(content) {
 }
 
 function handleEmptyBodyWithSignature() {
+  // WhatsApp puts the signature on the first line, so the cursor stays after it.
+  if (effectiveChannelType.value === INBOX_TYPES.WHATSAPP) {
+    focusEditorInputField('end');
+    return;
+  }
+
   const { schema, tr, doc } = state;
 
   const isEmptyParagraph = node =>
@@ -482,7 +488,7 @@ function focusEditor(content) {
     handleEmptyBodyWithSignature();
   } else if (props.focusOnMount) {
     // this is in the else block, handleEmptyBodyWithSignature also has a call to the focus method
-    // the position is set to start, because the signature is added at the end of the body
+    // Non-WhatsApp signatures sit at the end, so the cursor stays at the end.
     focusEditorInputField('end');
   }
 }

@@ -6,6 +6,8 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def perform_reply
+    return send_group_reply if message.conversation.group?
+
     if template_params.present?
       tag_contact_info_template_request
       return send_template_message
@@ -17,6 +19,18 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     message.update!(status: :failed, external_error: I18n.t('errors.whatsapp.message_outside_messaging_window'))
   rescue CustomExceptions::WhatsappContactInfoRequestError => e
     message.update!(status: :failed, external_error: e.message)
+  end
+
+  def send_group_reply
+    unless channel.provider == 'whatsapp_cloud' && channel.groups_enabled?
+      message.update!(status: :failed, external_error: I18n.t('errors.whatsapp.groups_disabled'))
+      return
+    end
+
+    return send_template_message if template_params.present?
+    return send_session_message if message.conversation.can_reply?
+
+    message.update!(status: :failed, external_error: I18n.t('errors.whatsapp.message_outside_messaging_window'))
   end
 
   def send_contact_info_request
@@ -41,7 +55,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       return
     end
 
-    message_id = channel.send_template(message.conversation.contact_inbox.source_id, {
+    message_id = channel.send_template(recipient_source_id, {
                                          name: name,
                                          namespace: namespace,
                                          lang_code: lang_code,
@@ -51,8 +65,14 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def send_session_message
-    message_id = channel.send_message(message.conversation.contact_inbox.source_id, message)
+    message_id = channel.send_message(recipient_source_id, message)
     message.update!(source_id: message_id) if message_id.present?
+  end
+
+  def recipient_source_id
+    return message.conversation.group_source_id if message.conversation.group?
+
+    message.conversation.contact_inbox.source_id
   end
 
   def template_params

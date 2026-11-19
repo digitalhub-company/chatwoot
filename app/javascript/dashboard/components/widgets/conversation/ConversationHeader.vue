@@ -16,6 +16,8 @@ import { useInbox } from 'dashboard/composables/useInbox';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { conversationDisplayName } from 'dashboard/helper/groupConversation';
+import ConversationApi from 'dashboard/api/conversations';
 
 const props = defineProps({
   chat: {
@@ -73,9 +75,33 @@ const mailSubject = computed(() => {
   return props.chat.additional_attributes?.mail_subject;
 });
 
-const currentContact = computed(() =>
-  store.getters['contacts/getContact'](props.chat.meta.sender.id)
+const currentContact = computed(() => {
+  const senderId = props.chat.meta?.sender?.id;
+  if (!senderId) return {};
+
+  return store.getters['contacts/getContact'](senderId) || {};
+});
+
+const displayName = computed(() =>
+  conversationDisplayName(props.chat, currentContact.value?.name)
 );
+
+const copyGroupInviteLink = async () => {
+  try {
+    const storedLink =
+      props.chat.additional_attributes?.whatsapp_group?.invite_link;
+    const link =
+      storedLink ||
+      (await ConversationApi.getWhatsappGroupInviteLink(props.chat.id)).data
+        ?.invite_link;
+    if (!link) throw new Error('missing invite link');
+
+    await copyTextToClipboard(link);
+    useAlert(t('CONVERSATION.HEADER.COPY_GROUP_INVITE_SUCCESS'));
+  } catch {
+    useAlert(t('CONVERSATION.HEADER.COPY_GROUP_INVITE_FAILED'));
+  }
+};
 
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
@@ -126,7 +152,7 @@ const copyConversationId = async () => {
         class="me-2"
       />
       <Avatar
-        :name="currentContact.name"
+        :name="displayName"
         :src="currentContact.thumbnail"
         :size="32"
         :status="currentContact.availability_status"
@@ -137,7 +163,7 @@ const copyConversationId = async () => {
           <span
             class="text-sm font-medium truncate leading-tight text-n-slate-12"
           >
-            {{ currentContact.name }}
+            {{ displayName }}
           </span>
           <fluent-icon
             v-if="!isHMACVerified"
@@ -157,6 +183,14 @@ const copyConversationId = async () => {
             @click="copyConversationId"
           >
             {{ `#${chat.id}` }}
+          </button>
+          <button
+            v-if="chat.group"
+            type="button"
+            class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0"
+            @click="copyGroupInviteLink"
+          >
+            {{ t('CONVERSATION.HEADER.COPY_GROUP_INVITE') }}
           </button>
           <span v-if="hasMultipleInboxes">•</span>
           <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />

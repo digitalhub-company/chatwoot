@@ -61,6 +61,10 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['inbound_calls_enabled'] != false
   end
 
+  def groups_enabled?
+    provider == 'whatsapp_cloud' && ActiveModel::Type::Boolean.new.cast(provider_config['groups_enabled'])
+  end
+
   # Whether this inbox can do WhatsApp calling at all. Meta's Calling API is
   # reachable by any whatsapp_cloud inbox, so 360dialog inboxes can't be toggled
   # on even though calling_enabled would persist.

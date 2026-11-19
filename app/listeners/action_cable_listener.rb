@@ -1,5 +1,6 @@
 class ActionCableListener < BaseListener
   include Events::Types
+  include GroupContactEvents
 
   def notification_created(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
@@ -192,13 +193,14 @@ class ActionCableListener < BaseListener
   end
 
   def typing_event_listener_tokens(account, conversation, user)
+    contact_token = conversation.contact_inbox&.pubsub_token
     current_user_token = if user.is_a?(Contact)
-                           conversation.contact_inbox.pubsub_token
+                           contact_token
                          elsif user.respond_to?(:pubsub_token)
                            user.pubsub_token
                          end
 
-    tokens = user_tokens(account, conversation.inbox.members) + [conversation.contact_inbox.pubsub_token]
+    tokens = user_tokens(account, conversation.inbox.members) + [contact_token]
     current_user_token.present? ? tokens - [current_user_token] : tokens
   end
 
@@ -214,12 +216,6 @@ class ActionCableListener < BaseListener
     return [] if contact_inbox.nil?
 
     contact_inbox_tokens(contact_inbox)
-  end
-
-  def contact_inbox_tokens(contact_inbox)
-    contact = contact_inbox.contact
-
-    contact_inbox.hmac_verified? ? contact.contact_inboxes.where(hmac_verified: true).filter_map(&:pubsub_token) : [contact_inbox.pubsub_token]
   end
 
   def broadcast(account, tokens, event_name, data)

@@ -15,6 +15,14 @@ class WebhookListener < BaseListener
     deliver_webhook_payloads(payload, inbox)
   end
 
+  def conversation_contact_added(event)
+    deliver_group_contact_webhook(__method__.to_s, event)
+  end
+
+  def conversation_contact_removed(event)
+    deliver_group_contact_webhook(__method__.to_s, event)
+  end
+
   def conversation_created(event)
     conversation = extract_conversation_and_account(event)[0]
     inbox = conversation.inbox
@@ -125,6 +133,14 @@ class WebhookListener < BaseListener
 
     WebhookJob.perform_later(inbox.channel.webhook_url, payload, :api_inbox_webhook,
                              secret: inbox.channel.secret, delivery_id: SecureRandom.uuid)
+  end
+
+  def deliver_group_contact_webhook(event_name, event)
+    conversation = event.data[:conversation]
+    return if conversation.blank?
+
+    payload = conversation.webhook_data.merge(event: event_name, contact: event.data[:contact]&.webhook_data)
+    deliver_webhook_payloads(payload, conversation.inbox)
   end
 
   def deliver_webhook_payloads(payload, inbox)

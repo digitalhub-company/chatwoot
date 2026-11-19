@@ -1,6 +1,9 @@
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
+  include Whatsapp::Providers::WhatsappCloudGroupDelivery
+
   def send_message(phone_number, message)
     @message = message
+    return reject_unsupported_group_message(message) if unsupported_group_message?(message)
 
     if message.attachments.present?
       send_attachment_message(phone_number, message)
@@ -14,17 +17,17 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def send_template(phone_number, template_info, message)
     template_body = template_body_parameters(template_info)
 
+    return reject_unsupported_group_template(message) if unsupported_group_template?(message, template_info)
+
     request_body = {
       messaging_product: 'whatsapp',
-      recipient_type: 'individual', # Only individual messages supported (not group messages)
-      # BSUID -> `recipient`; phone number -> `to` (see recipient_params in the base provider).
-      **recipient_params(phone_number),
+      **template_recipient_params(phone_number, message),
       type: 'template',
       template: template_body
     }
 
     response = HTTParty.post(
-      "#{phone_id_path}/messages",
+      "#{message_api_path(message)}/messages",
       headers: api_headers,
       body: request_body.to_json
     )
@@ -125,34 +128,18 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     "#{api_base_path}/v14.0/#{whatsapp_channel.provider_config['business_account_id']}"
   end
 
-  def send_text_message(phone_number, message)
-    response = HTTParty.post(
-      "#{phone_id_path}/messages",
-      headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        context: whatsapp_reply_context(message),
-        **recipient_params(phone_number),
-        text: { body: message.outgoing_content },
-        type: 'text'
-      }.to_json
-    )
-
-    process_response(response, message)
-  end
-
   def send_attachment_message(phone_number, message)
     attachment = message.attachments.first
     normalize_opus_content_type(attachment)
     type = %w[image audio video].include?(attachment.file_type) ? attachment.file_type : 'document'
     type_content = build_attachment_content(type, attachment, message)
     response = HTTParty.post(
-      "#{phone_id_path('v24.0')}/messages",
+      "#{group_message?(message) ? message_api_path(message) : phone_id_path('v24.0')}/messages",
       headers: api_headers,
       body: {
         :messaging_product => 'whatsapp',
         :context => whatsapp_reply_context(message),
-        **recipient_params(phone_number),
+        **message_recipient_params(phone_number, message),
         'type' => type,
         type.to_s => type_content
       }.to_json

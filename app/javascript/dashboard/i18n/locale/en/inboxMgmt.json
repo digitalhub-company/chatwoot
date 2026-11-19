@@ -767,7 +767,8 @@
       "ACCOUNT_HEALTH": "Account Health",
       "CSAT": "CSAT",
       "VOICE": "Voice",
-      "CALLS": "Calls"
+      "CALLS": "Calls",
+      "GROUPS": "Groups"
     },
     "VOICE_CONFIGURATION": {
       "ENABLE_VOICE": {
@@ -802,6 +803,30 @@
         "ACTIVE": "Current announcement",
         "SAVE": "Save announcement"
       }
+    },
+    "WHATSAPP_GROUPS": {
+      "ENABLE": {
+        "LABEL": "Enable WhatsApp groups",
+        "DESCRIPTION": "Receive and reply to WhatsApp Cloud API groups on this inbox. One-to-one chats stay unchanged while this is off. Meta only allows groups on an Official Business Account, and not on WhatsApp Business app numbers (coexistence)."
+      },
+      "LIMITS": "Participants join with an invite link. You cannot add them directly. A group has at most 8 participants besides the business, and a number can have at most 10,000 groups.",
+      "SUBJECT": {
+        "LABEL": "Group subject",
+        "PLACEHOLDER": "Support group"
+      },
+      "DESCRIPTION": {
+        "LABEL": "Description",
+        "HELP": "Optional. Maximum 2048 characters. The invite link arrives on the group_lifecycle_update webhook after Meta creates the group."
+      },
+      "APPROVAL": {
+        "LABEL": "Join approval",
+        "AUTO": "Anyone with the link can join",
+        "REQUIRED": "Join requests need approval"
+      },
+      "CREATE": "Create group",
+      "CREATE_SUCCESS": "Group request accepted. The conversation appears when Meta sends the group created webhook.",
+      "CREATE_ACCEPTED": "Group request sent. The invite link arrives on the group created webhook.",
+      "CREATE_ERROR": "Could not create the WhatsApp group."
     },
     "WHATSAPP_CALLING": {
       "ENABLE": {
